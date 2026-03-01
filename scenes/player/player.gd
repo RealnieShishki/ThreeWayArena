@@ -1,86 +1,75 @@
 extends CharacterBody2D
 
-# === НАСТРОЙКИ ===
 @export var speed: float = 180.0
-@export var health: int = 100
 @export var attack_damage: int = 10
 @export var attack_cooldown: float = 0.5
-@export var attack_range: float = 60.0
+@export var attack_range: float = 150.0
 
-# === ВНУТРЕННИЕ ПЕРЕМЕННЫЕ ===
 var _can_attack: bool = true
 var _facing_direction: Vector2 = Vector2.RIGHT
 
-# Ссылки на узлы
 @onready var sprite: Sprite2D = $Visual
-@onready var collision: CollisionShape2D = $CollisionShape2D
 
 func _ready() -> void:
-	print("🎮 Player ready! Position: %s" % global_position)
-	print("   Health: %d, Speed: %f" % [health, speed])
-	
-	# Проверка спрайта
-	if sprite and not sprite.texture:
-		push_warning("⚠️ Sprite has no texture! Assign icon.svg")
+	print("🎮 Player Ready")
 
 func _physics_process(_delta: float) -> void:
-	# 1. Ввод движения
 	var input_dir: Vector2 = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	
-	# 2. Движение
 	if input_dir != Vector2.ZERO:
 		velocity = input_dir.normalized() * speed
 		_facing_direction = input_dir.normalized()
-		_update_facing_visual()
+		if _facing_direction.x < 0:
+			sprite.flip_h = true
+		elif _facing_direction.x > 0:
+			sprite.flip_h = false
 	else:
 		velocity = velocity.move_toward(Vector2.ZERO, speed * 0.8)
 	
 	move_and_slide()
 	
-	# 3. Атака
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and _can_attack:
 		_attack()
-
-func _update_facing_visual() -> void:
-	if sprite:
-		if _facing_direction.x < 0:
-			sprite.flip_h = true
-		elif _facing_direction.x > 0:
-			sprite.flip_h = false
+		
+	# 📷 Камера следует за игроком
+	var camera = get_node_or_null("../../Camera2D")
+	if camera:
+		camera.global_position = global_position
 
 func _attack() -> void:
 	_can_attack = false
+	print("⚔️ Attack!")
 	
-	print("⚔️ Attack! Damage: %d" % attack_damage)
+	var targets = get_tree().get_nodes_in_group("enemy")
 	
-	# Raycast для попадания
-	var space_state = get_world_2d().direct_space_state
-	var mouse_pos = get_global_mouse_position()
-	var query = PhysicsRayQueryParameters2D.create(global_position, mouse_pos)
-	query.collide_with_areas = true
-	query.collision_mask = 2  # Слой "Enemy"
+	for target in targets:
+		var dist = global_position.distance_to(target.global_position)
+		if dist < attack_range:
+			print("🎯 HIT! Enemy: %s" % target.name)
+			
+			# ✨ Эффект в позиции врага
+			_spawn_hit_effect(target.global_position)
+			
+			if target.has_method("take_damage"):
+				target.take_damage(attack_damage)
+			break
 	
-	var result = space_state.intersect_ray(query)
-	if result and result.collider:
-		var target = result.collider
-		if target.has_method("take_damage"):
-			target.take_damage(attack_damage)
-			print("🎯 Hit: %s" % target.name)
-	
-	# Кулдаун
 	await get_tree().create_timer(attack_cooldown).timeout
 	_can_attack = true
 
-# === ПУБЛИЧНЫЕ МЕТОДЫ ===
+func _spawn_hit_effect(pos: Vector2) -> void:
+	var effect_scene = load("res://scenes/effects/HitEffect.tscn")
+	if effect_scene == null:
+		return
+	var effect = effect_scene.instantiate()
+	effect.global_position = pos
+	
+	# 🔍 В КОРЕНЬ СЦЕНЫ!
+	get_tree().current_scene.add_child(effect)
+
 func take_damage(amount: int) -> void:
-	health -= amount
-	print("💥 Player hit! HP: %d/%d" % [health, 100])
-	if health <= 0:
-		die()
+	print("💥 Player hurt! Damage: %d" % amount)
 
 func die() -> void:
 	print("☠️ Player died")
 	queue_free()
-
-func heal(amount: int) -> void:
-	health = min(health + amount, 100)

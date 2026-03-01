@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://bwtyf3ds60g5f"]
 
-[ext_resource type="Script" path="res://scenes/enemies/enemy.gd" id="1_oawxp"]
+[ext_resource type="Script" path="res://scenes/enemies/Enemy.gd" id="1_oawxp"]
 [ext_resource type="Texture2D" uid="uid://cg0pwctdo5nln" path="res://icon.svg" id="2_ofy8w"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_aoit7"]
@@ -9,7 +9,7 @@ radius = 16.0
 [sub_resource type="CircleShape2D" id="CircleShape2D_8blm8"]
 radius = 150.0
 
-[node name="Enemy" type="CharacterBody2D"]
+[node name="Enemy" type="CharacterBody2D" groups=["enemy"]]
 collision_layer = 2
 script = ExtResource("1_oawxp")
 
@@ -21,6 +21,7 @@ texture = ExtResource("2_ofy8w")
 shape = SubResource("CircleShape2D_aoit7")
 
 [node name="DetectionArea" type="Area2D" parent="."]
+collision_layer = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="DetectionArea"]
 light_mask = 2
